@@ -1,11 +1,13 @@
 import pytest
 
+from typing import Any, cast
 from browser_use.agent.views import (
 	ActionResult,
 	AgentBrain,
 	AgentHistory,
 	AgentHistoryList,
 	AgentOutput,
+	AgentError,
 )
 from browser_use.browser.views import BrowserState, BrowserStateHistory, TabInfo
 from browser_use.controller.registry.service import Registry
@@ -192,6 +194,53 @@ def test_action_creation(action_registry):
 
 	assert click_action.model_dump(exclude_none=True) == {'click_element': {'index': 1}}
 
+
+def test_check_api_error_no_response():
+    error = Exception("No response error")
+    # response 属性がない場合、None が返るはず
+    assert not hasattr(error, 'response')
+    api_error_msg = AgentError.check_api_error(error)
+    assert api_error_msg is None
+
+def test_check_api_error_bad_request():
+    error = Exception("Bad request error")
+    error = cast(Any, error)
+    error.response = type("Response", (), {"status_code": 400, "text": ""})()
+    msg = AgentError.check_api_error(error)
+    assert msg is not None
+    assert "Bad Request (400)" in msg
+
+def test_check_api_error_unauthorized():
+    error = Exception("Unauthorized error")
+    error = cast(Any, error)
+    error.response = type("Response", (), {"status_code": 401, "text": ""})()
+    msg = AgentError.check_api_error(error)
+    assert msg is not None
+    assert "Unauthorized (401)" in msg
+
+def test_check_api_error_not_found():
+    error = Exception("Not found error")
+    error = cast(Any, error)
+    error.response = type("Response", (), {"status_code": 404, "text": ""})()
+    msg = AgentError.check_api_error(error)
+    assert msg is not None
+    assert "Not Found (404)" in msg
+
+def test_check_api_error_too_many_requests():
+    error = Exception("Rate limit error")
+    error = cast(Any, error)
+    error.response = type("Response", (), {"status_code": 429, "text": ""})()
+    msg = AgentError.check_api_error(error)
+    assert msg is not None
+    assert "Too Many Requests (429)" in msg
+
+def test_check_api_error_server_error():
+    error = Exception("Server error")
+    error = cast(Any, error)
+    error.response = type("Response", (), {"status_code": 500, "text": ""})()
+    msg = AgentError.check_api_error(error)
+    assert msg is not None
+    assert "Server Error (500)" in msg
 
 # run this with:
 # pytest browser_use/agent/tests.py
