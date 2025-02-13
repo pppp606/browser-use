@@ -1,11 +1,13 @@
 import pytest
 
+from typing import Any, cast
 from browser_use.agent.views import (
 	ActionResult,
 	AgentBrain,
 	AgentHistory,
 	AgentHistoryList,
 	AgentOutput,
+	AgentError,
 )
 from browser_use.browser.views import BrowserState, BrowserStateHistory, TabInfo
 from browser_use.controller.registry.service import Registry
@@ -195,6 +197,43 @@ def test_action_creation(action_registry):
 
 	assert click_action.model_dump(exclude_none=True) == {'click_element': {'index': 1}}
 
+
+def test_check_api_error_no_response():
+    error = Exception("No response error")
+    assert not hasattr(error, 'response')
+    msg = AgentError.check_api_error(error)
+    assert msg is None
+
+def test_check_api_error_bad_request():
+    error = Exception("Bad request error")
+    error = cast(Any, error)
+    error.response = type("Response", (), {"status_code": 400, "text": ""})()
+    msg = AgentError.check_api_error(error)
+    assert msg is not None
+    assert "Please verify your API parameters and configuration" == msg
+
+def test_check_api_error_unauthorized():
+    error = Exception("Unauthorized error")
+    error = cast(Any, error)
+    error.response = type("Response", (), {"status_code": 401, "text": ""})()
+    msg = AgentError.check_api_error(error)
+    assert msg is not None
+    assert "Check your API key or credentials" == msg
+
+def test_check_api_error_not_found():
+    error = Exception("Not found error")
+    error = cast(Any, error)
+    error.response = type("Response", (), {"status_code": 404, "text": ""})()
+    msg = AgentError.check_api_error(error)
+    assert msg is not None
+    assert "The requested resource may not exist. Check your endpoint or model name" == msg
+
+def test_check_api_error_server_error():
+    error = Exception("Server error")
+    error = cast(Any, error)
+    error.response = type("Response", (), {"status_code": 500, "text": ""})()
+    msg = AgentError.check_api_error(error)
+    assert msg is None
 
 # run this with:
 # pytest browser_use/agent/tests.py

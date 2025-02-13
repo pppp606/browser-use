@@ -359,9 +359,15 @@ class Agent:
 		"""Handle all types of errors that can occur during a step"""
 		include_trace = logger.isEnabledFor(logging.DEBUG)
 		error_msg = AgentError.format_error(error, include_trace=include_trace)
+		api_error_msg = AgentError.check_api_error(error)
 		prefix = f'❌ Result failed {self.consecutive_failures + 1}/{self.max_failures} times:\n '
 
-		if isinstance(error, (ValidationError, ValueError)):
+		if api_error_msg:
+			self.consecutive_failures = self.max_failures
+			logger.error(f'❌ API Connection Error: {api_error_msg}')
+			logger.error(f'Hint: Please verify the configuration for {self.chat_model_library}()')
+			logger.error(f'{error_msg}')
+		elif isinstance(error, (ValidationError, ValueError)):
 			logger.error(f'{prefix}{error_msg}')
 			if 'Max token limit reached' in error_msg:
 				# cut tokens from history
