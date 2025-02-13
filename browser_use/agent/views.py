@@ -269,20 +269,14 @@ class AgentError:
 		"""Check if the error is an API error and return a formatted message"""
 
 		if hasattr(error, 'response'):
-			try:
-				response = getattr(error, 'response', None)
-				if response is not None:
-					status_code = getattr(response, 'status_code', None)
-					if status_code == 400:
-						return ("Please verify your API parameters and configuration")
-					elif status_code == 401:
-						return ("Check your API key or credentials")
-					elif status_code == 404:
-						return ("The requested resource may not exist. Check your endpoint or model name")
-					elif status_code == 429:
-						return ("You have hit the rate limit. Please slow down your requests")
-			except Exception as ex:
-					import logging
-					logging.debug("Failed to process API error: %s", ex)
+			response = getattr(error, 'response', None)
+			if response is not None:
+				status_code = getattr(response, 'status_code', None)
+				if status_code == 400:
+					return ("Please verify your API parameters and configuration")
+				elif status_code == 401:
+					return ("Check your API key or credentials")
+				elif status_code == 404:
+					return ("The requested resource may not exist. Check your endpoint or model name")
 
 		return None
